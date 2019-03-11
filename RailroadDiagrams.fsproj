@@ -9,7 +9,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DiagramConfiguarion.fs" />
-    <Compile Include="RailwayDiagram.fs" />
+    <Compile Include="RailroadDiagrams.fs" />
+    <Compile Include="DiagramHelper.fs" />
   </ItemGroup>
 
   <ItemGroup>
