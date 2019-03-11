@@ -3,7 +3,7 @@ A .Net Port of [tabatkins' railroad-diagrams](https://github.com/tabatkins/railr
 
 ==========================
 
-![](https://github.com/tabatkins/railroad-diagrams/tree/gh-pages/images/rr-title.png "Diagram(Stack('Generate', 'some'), OneOrMore(NonTerminal('railroad diagrams'), Comment('and more')))")
+![](images/rr-title.png "Diagram(Stack('Generate', 'some'), OneOrMore(NonTerminal('railroad diagrams'), Comment('and more')))")
 
 This is a small library for generating railroad diagrams
 (like what [JSON.org](http://json.org) uses)
