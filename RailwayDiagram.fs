@@ -4,19 +4,19 @@ open System.Collections.Generic
 open System.IO
 [<AutoOpen>]
 module Utilities =
-    let mutable defaultConfiguration = new DiagramConfiguration()
-    let internal MakeValidText text =
+    let mutable DefaultConfiguration = new DiagramConfiguration()
+    let EscapeEntities text =
         Regex.Replace(text,"[*_\`\[\]<&]",MatchEvaluator(fun m -> sprintf "&#%i" <| int m.Value.[0]))
     let DetermineGaps(outer:float, inner:float) =
             let diff = outer - inner
-            match defaultConfiguration.InternalAlignment with
+            match DefaultConfiguration.InternalAlignment with
             | TextAlignment.Left -> (0.,diff)
             | TextAlignment.Right -> (diff,0.)
             | TextAlignment.Center -> (diff/2.,diff/2.)
             | _ -> invalidArg "configuration.InternalAlignment" "Invalid alignment"
 
-    let diDict vs = Dictionary(dict vs)
-    let dictFromPair (k,v) = diDict [k,v]
+    let internal diDict vs = Dictionary(dict vs)
+    let internal dictFromPair (k,v) = diDict [k,v]
     let DefaultStyle = """
         svg.railroad-diagram {
             background-color:hsl(30,20%,95%);
@@ -64,7 +64,7 @@ type DiagramItem(name:string,attributes:Dictionary<string,string>,text:DiString 
         member val NeedsSpace = false with get,set
 
         member internal self.AddDebug(el:DiagramItem)=
-            if defaultConfiguration.Debug then
+            if DefaultConfiguration.Debug then
                 el.Attributes.["data-x"] <- (sprintf "%s w:%f h:%f/%f/%f" (el.GetType().Name) el.Width el.Up el.Height el.Down)
 
 
@@ -84,14 +84,14 @@ type DiagramItem(name:string,attributes:Dictionary<string,string>,text:DiString 
                 writer.Write(sprintf "<%s" name)
                 self.Attributes
                 |> Seq.sortBy (fun x -> x.Key)
-                |> Seq.iter (fun x -> writer.Write(sprintf" %s=\"%s\"" x.Key <| MakeValidText x.Value))
+                |> Seq.iter (fun x -> writer.Write(sprintf" %s=\"%s\"" x.Key <| EscapeEntities x.Value))
                 writer.Write(">")
                 if Seq.contains name <| ["g"; "svg"] then
                     writer.Write("\n")
                 self.Children
                 |> Seq.iter(fun child -> match child with
                                          | Choice1Of2 c -> c.WriteSvg(writer)
-                                         | Choice2Of2 x -> x |> MakeValidText |> writer.Write)
+                                         | Choice2Of2 x -> x |> EscapeEntities |> writer.Write)
                 writer.Write(sprintf "</%s>" name)
 and DiString = Choice<DiagramItem,string>
 
@@ -126,7 +126,7 @@ type Path(x, y)=
 
     ///Draw an eigth of an circle
     member self.Arc(start, dir)=
-        let AR = defaultConfiguration.ArcRadius
+        let AR = DefaultConfiguration.ArcRadius
         let s2 = (AR / sqrt(2.))
         let s2inv = AR - s2
         let path = sprintf "a %f %f 0 0 %i %f %f" AR AR 
@@ -154,7 +154,7 @@ type Path(x, y)=
         self
 
     member self.Arc(sweep:string)=
-        let AR = defaultConfiguration.ArcRadius
+        let AR = DefaultConfiguration.ArcRadius
         let x = AR * if sweep.[0] = 'e' || sweep.[1] = 'w' then -1. else 1.
         let y = AR * if sweep.[0] = 's' || sweep.[1] = 'n' then -1. else 1.
         let cw = if sweep = "ne" || sweep = "es" || sweep = "sw" || sweep = "wn" then 1 else 0
@@ -178,7 +178,7 @@ type Style(css:string) =
 type Terminal(text:string,?href:string,?title:string) as self=
     inherit DiagramItem( "g", dictFromPair("class","terminal"))
     do
-        self.Width <- float text.Length * defaultConfiguration.CharWidth + 20.
+        self.Width <- float text.Length * DefaultConfiguration.CharWidth + 20.
         self.Up <- 11.
         self.Down <- 11.
         self.NeedsSpace <- true
@@ -218,7 +218,7 @@ type Start(startType:ComplexityType,?label:string) as self=
     inherit DiagramItem( "g")
     do
         self.Width <- match label with
-                      | Some(label) -> max 20. (float label.Length * defaultConfiguration.CharWidth + 10.)
+                      | Some(label) -> max 20. (float label.Length * DefaultConfiguration.CharWidth + 10.)
                       | None  -> 20.
 
         self.Up <- 10.
@@ -276,7 +276,7 @@ module Wrapper =
                     | Choice1Of2(diagram) -> diagram
                     | Choice2Of2(str) -> Terminal(str) :> DiagramItem
 type Diagram (items: DiString seq, diagramType:ComplexityType, css:string) as self =
-    inherit DiagramItem("svg", dictFromPair ("class",defaultConfiguration.DiagramClass))
+    inherit DiagramItem("svg", dictFromPair ("class",DefaultConfiguration.DiagramClass))
     let formattedContainer = ref false
     let itemContainer = ResizeArray(items |> Seq.map Wrap)
     do 
@@ -322,7 +322,7 @@ type Diagram (items: DiString seq, diagramType:ComplexityType, css:string) as se
         let mutable x = paddingLeft
         let mutable y = paddingTop + self.Up
         let g = DiagramItem("g")
-        if defaultConfiguration.IsStrokeOddPixelLength then
+        if DefaultConfiguration.IsStrokeOddPixelLength then
             g.Attributes.["transform"] <- "translate(.5 .5)"
         self.Items
         |> Seq.iter(fun item ->
@@ -418,8 +418,8 @@ type Sequence(items:DiString seq) as self =
 type Stack(items: DiString seq) as self=
     inherit DiagramItem("g")
     let itemContainer = ResizeArray(items |> Seq.map Wrap)
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     do
         self.NeedsSpace <- true
         self.Width <- self.Items
@@ -482,8 +482,8 @@ type Stack(items: DiString seq) as self=
 type OptionalSequenceImpl(items:DiString seq) as self=
     inherit DiagramItem("g")
     let itemContainer = ResizeArray(items |> Seq.map Wrap)
-    let VS = defaultConfiguration.VerticalSeperation
-    let AR = defaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
     do 
         self.Height <- self.Items |> Seq.sumBy(fun (item : DiagramItem) -> item.Height) 
         self.Down <- self.Items.[0].Down
@@ -588,8 +588,8 @@ type AlternatingSequence(first:DiString,second:DiString) as self=
     inherit DiagramItem("g")
     let first = Wrap first
     let second = Wrap second
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     do 
        let arc = AR
        let vert = VS
@@ -650,8 +650,8 @@ type AlternatingSequence(first:DiString,second:DiString) as self=
 type Choice(defaultChoice:int,items:DiString seq) as self=
     inherit DiagramItem("g")
     let itemContainer = ResizeArray(items |> Seq.map Wrap)
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     do    
         self.Width <- AR * 4. + (self.Items |> Seq.map (fun item -> item.Width) |> Seq.max)
         self.Up <- self.Items.[0].Up
@@ -732,8 +732,8 @@ type MultipleChoice(defaultChoice:int,choiceType:ChoiceType,items: DiString seq)
     let itemContainer = ResizeArray(items |> Seq.map Wrap)
     let innerWidthValue = itemContainer |> Seq.map (fun item -> item.Width) |> Seq.max
     let defaultChoice = max defaultChoice 0
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     do
         self.NeedsSpace <- true
         self.Width <- 30. + AR + self.InnerWidth + AR + 20.
@@ -848,8 +848,8 @@ type MultipleChoice(defaultChoice:int,choiceType:ChoiceType,items: DiString seq)
 
 type HorizontalChoiceImpl(items: DiString seq) as self =
     inherit DiagramItem( "g")
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     let allButLast = self.Items |> Seq.take (self.Items.Count - 1) 
     let middles = self.Items |> Seq.skip 1
     let first = self.Items.[0]
@@ -964,8 +964,8 @@ type OneOrMore(item:DiString, repeat: DiString) as self=
     inherit DiagramItem( "g")
     let repeat = repeat |> Wrap
     let item = Wrap(item)
-    let AR = defaultConfiguration.ArcRadius
-    let VS = defaultConfiguration.VerticalSeperation
+    let AR = DefaultConfiguration.ArcRadius
+    let VS = DefaultConfiguration.VerticalSeperation
     do 
         self.Width <- (max item.Width repeat.Width) + AR * 2.
         self.Height <- item.Height
@@ -1019,7 +1019,7 @@ module AuxilaryStructures =
 type NonTerminal(text:string,?href:string,?title:string) as self=
     inherit DiagramItem( "g", dictFromPair("class","non-terminal"))
     do
-        self.Width <- float text.Length * defaultConfiguration.CharWidth + 20.
+        self.Width <- float text.Length * DefaultConfiguration.CharWidth + 20.
         self.Up <- 11.
         self.Down <- 11.
         self.NeedsSpace <- true
@@ -1053,7 +1053,7 @@ type NonTerminal(text:string,?href:string,?title:string) as self=
 type Comment(text:string,?href:string ,?title:string) as self=
     inherit DiagramItem("g")
     do
-        self.Width <- float text.Length * defaultConfiguration.CommentCharWidth + 10.
+        self.Width <- float text.Length * DefaultConfiguration.CommentCharWidth + 10.
         self.Up <- 11.
         self.Down <- 11.
         self.NeedsSpace <- true
