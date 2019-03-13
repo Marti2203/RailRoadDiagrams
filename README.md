@@ -49,7 +49,7 @@ The containers:
     ![OptionalSequence('1', '2', '3')](images/rr-optseq.png "OptionalSequence('1', '2', '3')")
 * Choice(index, children) - like `|` in a regex.  The index argument specifies which child is the "normal" choice and should go in the middle
 
-    ![Choice(1, '1', '2', '3')](https://github.com/tabatkins/railroad-diagrams/tree/gh-pages/mages/rr-choice.png "Choice(1, '1', '2', '3')")
+    ![Choice(1, '1', '2', '3')](images/rr-choice.png "Choice(1, '1', '2', '3')")
 * MultipleChoice(index, type, children) - like `||` or `&&` in a CSS grammar; it's similar to a Choice, but more than one branch can be taken.  The index argument specifies which child is the "normal" choice and should go in the middle, while the type argument must be either "any" (1+ branches can be taken) or "all" (all branches must be taken).
 
     ![MultipleChoice(1, 'all', '1', '2', '3')](images/rr-multchoice.png "MultipleChoice(1, 'all', '1', '2', '3')")
