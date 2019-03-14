@@ -79,8 +79,6 @@ type DiagramItem(name:string,attributes:Dictionary<string,string>,text:DiString 
         ///Output SVG to writer
         abstract WriteSvg : TextWriter -> unit
         default self.WriteSvg (writer:TextWriter) =
-                //printfn "%A" self.Attributes
-                //printfn "%A" self.children
                 writer.Write(sprintf "<%s" name)
                 self.Attributes
                 |> Seq.sortBy (fun x -> x.Key)
@@ -286,13 +284,13 @@ type Diagram (items: DiString seq, diagramType:ComplexityType, css:string) as se
             self.Items.Add(End(self.DiagramType))
         self.Items.Insert(0, Style(self.CSS))
         self.Items
-        |> Seq.skip 1
         |> Seq.iter(fun item ->
-
-            self.Width <- self.Width + item.Width + (if item.NeedsSpace then 20. else 0.)
-            self.Up <- max self.Up (item.Up - self.Height)
-            self.Height <- item.Height
-            self.Down <- max (self.Down - item.Height) item.Down
+            if item :? Style then ()
+            else
+                self.Width <- self.Width + item.Width + (if item.NeedsSpace then 20. else 0.)
+                self.Up <- max self.Up (item.Up - self.Height)
+                self.Height <- item.Height
+                self.Down <- max (self.Down - item.Height) item.Down
         )
         if self.Items.[0].NeedsSpace then
             self.Width <- self.Width - 10.
@@ -377,7 +375,7 @@ type Sequence(items:DiString seq) as self =
         self.NeedsSpace <- true
         self.Items 
         |> Seq.iter(fun item -> 
-            self.Width <- item.Width + (if item.NeedsSpace then 20. else 0.)
+            self.Width <- self.Width + item.Width + (if item.NeedsSpace then 20. else 0.)
             self.Up <- max self.Up (item.Up - self.Height)
             self.Height <- self.Height + item.Height
             self.Down <- max (self.Down - item.Height) item.Down
@@ -407,7 +405,7 @@ type Sequence(items:DiString seq) as self =
                 x <- x + 10.
             item.Format(x,y,item.Width).AddTo(self) |> ignore
             x <- x + item.Width
-            y <- x + item.Height
+            y <- y + item.Height
             if item.NeedsSpace && i < last then
                 Path(x, y).HorizontalLine(10.).AddTo(self) |> ignore
                 x <- x + 10.
@@ -695,7 +693,7 @@ type Choice(defaultChoice:int,items:DiString seq) as self=
             let mutable distanceFromY = max (AR * 2.) (defaultItem.Up + VS + firstAbove.Down + firstAbove.Height)
             let length = Seq.length above
             above |> Seq.iteri(fun i item -> 
-                let ni = length - i
+                let ni = i - length
                 Path(x, y).Arc("se").UpLine(distanceFromY - AR * 2.).Arc("wn").AddTo(self) |> ignore
                 item.Format(x + AR * 2.,y - distanceFromY,innerWidth).AddTo(self) |> ignore
                 Path(x + AR * 2. + innerWidth, y - distanceFromY + item.Height).Arc("ne") 
